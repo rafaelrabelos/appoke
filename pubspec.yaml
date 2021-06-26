@@ -1,0 +1,47 @@
+name: poke_app
+description: Pokemon app
+version: 1.1.0+1
+
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  font_awesome_flutter: ^8.5.0
+  http: ^0.12.0+4
+  step_progress_indicator: ^0.2.3+6
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^0.1.2
+  avatar_glow: ^1.2.0
+  flutter_launcher_icons: "^0.9.0"
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+
+# The following section is specific to Flutter.
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Lato
+      fonts:
+        - asset: assets/fonts/Lato/Lato-Bold.ttf
+          weight: 300
+        - asset: assets/fonts/Lato/Lato-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Lato/Lato-Regular.ttf
+    - family: Lato Light
+      fonts:
+        - asset: assets/fonts/Lato/Lato-Light.ttf
+        - asset: assets/fonts/Lato/Lato-LightItalic.ttf
+    - family: Lato Light
+      fonts:
+        - asset: assets/fonts/Lato/Lato-Thin.ttf
+        - asset: assets/fonts/Lato/Lato-ThinItalic.ttf
