@@ -1,8 +1,8 @@
-# poke app
+# Appoke
 
 A Pokemon App Flutter project.
 
-![alt text](https://ibb.co/5vddtMM)
+![Appoke](https://i.ibb.co/jGddB66/Simulator-Screen-Shot-i-Phone-11-2021-06-26-at-01-15-32.png)
 
 ## Description
 
