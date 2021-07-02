@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:poke_app/models/PokemonModel.dart';
 import 'package:poke_app/models/PokemonsListModel.dart';
 import 'package:poke_app/services/PokemonsService.dart';
+import 'package:poke_app/pages/shared/PokemonListItem.dart';
 
 class Home extends StatefulWidget {
   Home({Key key, this.title}) : super(key: key);
@@ -27,8 +28,9 @@ class _HomeState extends State<Home> {
   List<PokemonModel> pokemons;
   PokemonModel selectedPokemon;
   String fetchNextUrl;
+  bool isFetching;
 
-  _scrollListener() {
+  void _scrollListener() {
     var scrollOffset = _scrollController.offset;
     var maxScrollPos = _scrollController.position.maxScrollExtent;
     var minScrollPos = _scrollController.position.minScrollExtent;
@@ -37,14 +39,38 @@ class _HomeState extends State<Home> {
     bool bottomReached = (scrollOffset >= maxScrollPos && !outOfRangePos);
     bool topReached = (scrollOffset <= minScrollPos && !outOfRangePos);
 
-    if (topReached) {
-      setState(() {
-        print("reach the top");
-      });
-    }
     if (bottomReached) {
       this._fetchMorePokemons();
     }
+  }
+
+  void _setFetchingStatus(bool status) {
+    setState(() {
+      this.isFetching = status;
+    });
+  }
+
+  void _setPokemons(List<PokemonModel> pokemons) {
+    setState(() {
+      if (this.pokemons != null) {
+        this.pokemons.addAll(pokemons);
+      } else {
+        this.pokemons = pokemons;
+        this.selectedPokemon = this.pokemons.first;
+      }
+    });
+  }
+
+  void _setSelectedPokemon(pokemon) {
+    setState(() {
+      this.selectedPokemon = pokemon;
+    });
+  }
+
+  void _setNextFetchUrl(String url) {
+    setState(() {
+      this.fetchNextUrl = url;
+    });
   }
 
   void _fetchMorePokemons() {
@@ -61,6 +87,8 @@ class _HomeState extends State<Home> {
       List<PokemonModel> pokemons;
       PokemonsListModel pokemonsList;
       Map<String, String> queryParams = {"offset": "0", "limit": "20"};
+
+      this._setFetchingStatus(true);
 
       if (this.fetchNextUrl != null) {
         List<String> queryString = this.fetchNextUrl.split('?');
@@ -90,19 +118,13 @@ class _HomeState extends State<Home> {
 
         pokemons = await Future.wait(futures);
       }
-      setState(() {
-        this.fetchNextUrl = pokemonsList.next;
-        if (this.pokemons != null) {
-          this.pokemons.addAll(pokemons);
-        } else {
-          this.pokemons = pokemons;
-          this.selectedPokemon = this.pokemons.first;
-        }
-      });
+
+      this._setFetchingStatus(false);
+      this._setPokemons(pokemons);
+      this._setNextFetchUrl(pokemonsList.next);
     } catch (e) {
-      setState(() {
-        this.pokemons = null;
-      });
+      this._setPokemons(null);
+      this._setFetchingStatus(false);
     }
   }
 
@@ -115,21 +137,22 @@ class _HomeState extends State<Home> {
         alignment: Alignment.bottomCenter,
         children: <Widget>[
           Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                this._buildTopInfo(context),
-                SizedBox(
-                  width: double.infinity,
-                  height: deviceHeight / 2,
-                  child: Center(
-                    child: ListView(
-                        controller: this._scrollController, shrinkWrap: true,
-                        //padding: EdgeInsets.all(15.0),
-                        children: <Widget>[this._buildPokemons()]),
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              this._buildTopInfo(context),
+              SizedBox(
+                width: double.infinity,
+                height: deviceHeight / 2,
+                child: Center(
+                  child: ListView(
+                    controller: this._scrollController, shrinkWrap: true,
+                    //padding: EdgeInsets.all(15.0),
+                    children: <Widget>[this._buildPokemons()],
                   ),
                 ),
-              ],
+              ),
+            ],
           ),
         ],
       ),
@@ -158,48 +181,22 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildPokemons() {
-    if (this.pokemons == null) {
-      return Column(
-        children: [Text("No pokemons found!")],
-      );
+    List<PokemonListItem> widgets;
+    String message = this.isFetching ? "Loading..." : "No pokemons";
+
+    if (this.pokemons != null) {
+      widgets = this
+          .pokemons
+          .map((item) => PokemonListItem(
+                pokemon: item,
+                onTap: () {
+                  this._setSelectedPokemon(item);
+                },
+              ))
+          .toList();
     }
 
-    List<ListTile> widgets = this
-        .pokemons
-        .map((item) => ListTile(
-        onTap: (){
-          setState(() {
-            this.selectedPokemon = item;
-          });
-        },
-            leading: CircleAvatar(
-                backgroundColor: Colors.black12,
-                radius: 26.0,
-                backgroundImage: NetworkImage(
-                    "${item.sprites.other.officialArtwork.frontDefault}")),
-            title: Row(
-              children: <Widget>[
-                Text("${item.name}"),
-                SizedBox(
-                  width: 16.0,
-                ),
-                SizedBox(
-                  width: 16.0,
-                )
-              ],
-            ),
-            subtitle: Row(
-              children: [
-                Text("id: ${item.id} "),
-              ],
-            ),
-            trailing: Icon(
-              Icons.star,
-              size: 14.0,
-            )))
-        .toList();
-
-    return Column(children: widgets);
+    return Column(children: widgets ?? [Text(message)]);
   }
 
   Widget _buildTopInfo(BuildContext context) {
@@ -211,18 +208,20 @@ class _HomeState extends State<Home> {
     final weight = pokemonIsValid ? activePokemon.weight : "";
     final height = pokemonIsValid ? activePokemon.height : "";
     final baseExperience = pokemonIsValid ? activePokemon.baseExperience : "";
-    final frontDefault = pokemonIsValid ? activePokemon.sprites.other.officialArtwork.frontDefault : "";
+    final frontDefault = pokemonIsValid
+        ? activePokemon.sprites.other.officialArtwork.frontDefault
+        : "";
 
-    final  List<PokemonStatsData>  stats = pokemonIsValid ? activePokemon.stats : null;
+    final List<PokemonStatsData> stats =
+        pokemonIsValid ? activePokemon.stats : null;
 
     return Padding(
-      padding: EdgeInsets.only(top: 5,),
+      padding: EdgeInsets.only(top: 5),
       child: Column(children: <Widget>[
         CircleAvatar(
           backgroundColor: Colors.black12,
           radius: 80.0,
-          backgroundImage: NetworkImage(
-              "${frontDefault}"),
+          backgroundImage: NetworkImage("$frontDefault"),
         ),
         SizedBox(
           width: double.infinity, // match_parent
@@ -231,7 +230,7 @@ class _HomeState extends State<Home> {
               shadowColor: Color(0xFF0076FF),
               child: Row(
                 children: [
-                  SizedBox(width: 20,),
+                  SizedBox(width: 20),
                   SizedBox(
                     child: Column(
                       children: [
@@ -243,15 +242,15 @@ class _HomeState extends State<Home> {
                       ],
                     ),
                   ),
-                  SizedBox(width: 20,),
+                  SizedBox(width: 20),
                   SizedBox(
                     child: Column(
-                      children: stats != null ? stats
-                            .map((item) => new Text("${item.stat.statName}: ${item.baseStat}"))
-                            .toList()
-                        : [new Text("")]
-
-                    ),
+                        children: stats != null
+                            ? stats
+                                .map((item) => new Text(
+                                    "${item.stat.statName}: ${item.baseStat}"))
+                                .toList()
+                            : [new Text("")]),
                   ),
                 ],
               )),
